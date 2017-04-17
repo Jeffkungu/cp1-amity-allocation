@@ -38,7 +38,5 @@ class TestAmityModule(unittest.TestCase):
         self.assertEqual(self.amity.allocate_room('John Doe', 'Staff', 'N'), 'Failed. Staff can not have any accomodation)                
 
 
-
-
-
-
+if __name__ == '__main__':
+    unittest.main()

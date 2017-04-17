@@ -1,5 +1,5 @@
 import unittest
-from persons.persons import Person, Fellow, Staff
+from person.persons import Person, Fellow, Staff
 
 class TestPersonsModule(unittest.TestCase):
     def Test_Fellow_title(self):
