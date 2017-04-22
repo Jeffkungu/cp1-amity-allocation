@@ -4,6 +4,7 @@ class Person(object):
         self.last_name = last_name
         self.person_title = person_title
         self.accomodation = accomodation
+       
 
     def person_full_name(self):
         full_name =  self.first_name + " " + self.last_name
@@ -11,8 +12,9 @@ class Person(object):
 
 class Fellow(Person):
     def __init__(self, first_name, last_name):
-        super(Fellow, self).__init__(person_title="Fellow", accomodation="Y")
+        super(Fellow, self).__init__(first_name=first_name, last_name=last_name, person_title="Fellow", accomodation="Y")
+        full_name = self.first_name + " " + self.last_name
 
 class Staff(Person):
     def __init__(self, first_name, last_name):
-        super(Staff, self).__init__(person_title="Staff", accomodation="N")        
+        super(Staff, self).__init__(first_name=first_name, last_name=last_name, person_title="Staff", accomodation="N")        
