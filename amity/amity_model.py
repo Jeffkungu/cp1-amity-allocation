@@ -1,5 +1,6 @@
 import random
 import os
+from termcolor import colored
 from person.persons import Person, Fellow, Staff
 from room.rooms import Room, LivingSpace, Office
 
@@ -122,11 +123,40 @@ class Amity(object):
             if len(livingsp_available) == 0 and len(offices_available) == 0:
                 return "Sorry. There are no living space or offices available"
 
+    def fetch_person(self, identifier):
+        '''Gets you the person with all attributes attached to the person object.
+           Gets the person using the Id assigned to the person'''
+        identifiers = [person.identifier for person in self.every_person]
+        person = None  
+        if identifier in identifiers:
+            if identifier == person.identifier:
+                person = person.identifier
+                return person
+            else:
+                return "Sorry, Id does not match any person"
+        else:
+            return "Sorry, person does not exist"
 
-    def rellocate_room(self, first_name,last_name):
-        full_name = first_name + " " + last_name
-        person_title = person_title.upper()
-        persons =[p.full_name for p in self.every_person]
-
+    def fetch_room(self, room_name):
+        '''Gets you the room with all the occupants present '''
+        rooms = [room.room_name for room in self.existing_rooms]
+        room_object = None
+        if room_name in rooms:
+            if room_name == room.room_name:
+                room_object = room.room_name
+                return room_object
+            else:
+                return "Sorry, room name does not match any rooms"
+        else:
+            return "Sorry, room does not exist"                
         
-       
+    def reallocate_room(self, first_name,last_name, room_name):
+        '''Rellocates a person to a new room. First it checks whether the person exists, and if the person exists in the list of occupants of a specific room.
+           It then reallocates the person to a room if the person exists and is not in the list of occcupants of the room are reallocatig to'''
+        person = self.fetch_person(identifier)
+        if person == "Sorry, Id does not match any person":
+            print ('Check the Id, it does not match any person')
+            return "Check the Id, it does not match any person"
+        elif person == "Sorry, person does not exist":
+            print ("Sorry, person does not exist")
+            return "Sorry, person does not exist"
