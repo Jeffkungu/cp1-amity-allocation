@@ -20,7 +20,7 @@ class Rooms(BASE):
     room_name = Column(String(500), nullable=False)
     room_type = Column(String(500), nullable=False)
     max_capacity = Column(Integer, nullable=False)
-    capacity_occupied = Column(Integer, nullable=True)
+    occupants = Column(String, nullable=True)
 
 
 class Allocations(BASE):
@@ -32,6 +32,6 @@ class Allocations(BASE):
     office_name = Column(String(500), nullable=True)
     livingsp_name = Column(String(500), nullable=True)
 
-
-ENGINE = create_engine('sqlite:///amity.db')
-BASE.metadata.create_all(ENGINE)
+def engine_create():  
+    ENGINE = create_engine('sqlite:///amity.db')
+    BASE.metadata.create_all(ENGINE)

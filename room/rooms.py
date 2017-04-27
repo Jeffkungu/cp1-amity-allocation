@@ -8,7 +8,9 @@ class Room(object):
 class Office(Room):
     def __init__(self, room_name):
         super(Office, self).__init__(room_name=room_name, room_type = "OFFICE", max_capacity = 6, )
+        self.occupants = []
 
 class LivingSpace(Room):
     def __init__(self, room_name):
         super(LivingSpace, self).__init__(room_name=room_name, room_type = "LIVING SPACE", max_capacity = 4)
+        self.occupants = []
