@@ -1,25 +1,34 @@
 import unittest
+from amity.amity_model import Amity
+
 
 
 class TestAmityModule(unittest.TestCase):
     def setUp(self):
-        pass
+        self.amity = Amity()
 
-    def Test_load_sytem(self):
-        self.assertEqual(self.amity.load_system(), 'System successfully Loaded', msg='Loading Failed') 
+    def Test_create_existing_room(self):
+        self.amity.create_room("Ruby", "Office")
+        self.assertEqual(self.amity.create_room("Ruby", "Office"),
+                         'Room Ruby already exists')
 
-    def Test_create_room(self):
-        self.assertEqual(self.amity.create_room('Valhalla', 'Office'), 'Room successfully created', msg="Room not created")
+    def Test_create_Livinspace(self):
+        self.assertEqual(self.amity.create_room('PYTHON', 'LIVING SPACE'), 'Living Space successfully created')
 
-    def Test_check_if_room_exists(self):
-        self.amity.create_room('Valhalla', 'Office')
-        self.assertEqual(self.amity.create_room('London', 'OFFICE'), 'Room already exists', msg="Room doesn't exist")
+    def Test_create_Office(self):
+        self.assertEqual(self.amity.create_room('Krypton', 'OFFICE'), 'Office successfully created')
 
-    def Test_for_wrong_room_type_created(self):
-        self.assertEqual(self.amity.create_room('Valhlla', 'Random'), 'Room type entered does not exist. Please insert Office or Living space')
+    def Test_for_invalid_room_type_created(self):
+        self.assertEqual(self.amity.create_room('Valhalla', 'Random'), "Invalid room type, should be LIVING SPACE or OFFICE")
 
-    def Test_add_person(self):
-        self.assertEqual(self.amity.add_person('Jeff', 'Kungu', 'Fellow', 'Y'), 'Person Succesfully Added', msg="Failed. Person was not added")
+    def Test_add_person_interger_name(self):
+        self.assertEqual(self.amity.add_person(123, 123, 'Fellow', 'Y'), "Invalid name. Name should be letters")
+
+    def Test_add_person_invalid_role(self):
+        self.assertEqual(self.amity.add_person('Jeff', 'Kungu', 'Random', 'Y'), "Invalid role, should be STAFF or FELLOW")
+
+    def Test_add_fellow_without_accomodation(self):
+        self.assertEqual(self.amity.add_person('Jeff', 'Kungu', 'Fellow', 'N'), "Jeff Kungu successfully added", id(self))
 
     def Test_check_if_person_exists(self):
         self.amity.add_person('Jeff', 'Kungu', 'Fellow', 'Y')
@@ -35,8 +44,10 @@ class TestAmityModule(unittest.TestCase):
         self.assertEqual(self.amity.allocate_room('John Doe', 'Staff', 'N'), 'Living Space successfully allocated')
 
     def Test_allocate_livin_space_to_staff(self):
-        self.assertEqual(self.amity.allocate_room('John Doe', 'Staff', 'N'), 'Failed. Staff can not have any accomodation)                
-
+        self.assertEqual(self.amity.allocate_room('John Doe', 'Staff', 'N'), 'Failed. Staff can not have any accomodation')
+    
+    def Test_load_state(self):
+        self.assertEqual(self.amity.load_state(), 'System successfully Loaded', msg='Loading Failed') 
 
 if __name__ == '__main__':
     unittest.main()

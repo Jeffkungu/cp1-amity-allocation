@@ -1,10 +1,10 @@
 import random
 import os
-# from termcolor import colored
+from termcolor import colored
 from sqlalchemy import create_engine
 from person.persons import Person, Fellow, Staff
 from room.rooms import Room, LivingSpace, Office
-from db.database import BASE, Persons, Rooms, Allocations, engine_create
+from db.database import Base, Persons, Rooms, Allocations
 from sqlalchemy.orm import sessionmaker
 
 
@@ -12,7 +12,6 @@ class Amity(object):
     def __init__(self):
         self.existing_rooms = []
         self.every_person = []
-
 
     def create_room(self, room_name, room_type):
         room = [r.room_name for r in self.existing_rooms]
@@ -33,10 +32,10 @@ class Amity(object):
         person_title = person_title.upper()
         full_name = first_name + " " + last_name
         if type(first_name) != str or type(last_name) != str:
-            return "Invalid name, should be letters"
+            return "Invalid name. Name should be letters"
         else:
             if person_title.upper() not in ["STAFF", "FELLOW"]:
-                return "Invalid title, should be STAFF or FELLOW"
+                return "Invalid role, should be STAFF or FELLOW"
             elif accomodation == "N" and person_title == "FELLOW":
                 fellow = Fellow(first_name, last_name)
                 self.every_person.append(fellow)
@@ -66,9 +65,11 @@ class Amity(object):
             if person[0].person_title.upper() == "STAFF":
                 if accomodation == "Y":
                     office.occupants.append(person[0])
+                    person[0].allocation = office.room_name
                     return ("%s has been allocated an office only, staff can not get accomodation"% person[0].first_name)
                 elif accomodation == "N":
                     office.occupants.append(person[0])
+                    person[0].allocation = office.room_name
                     return ("Successfull %s has been allocated an office."% person[0].first_name)
                 else:
                     return "Invalid input, choice of accomodation should be Y or N"
@@ -76,9 +77,12 @@ class Amity(object):
                 if accomodation == "Y":
                    office.occupants.append(person[0])
                    living_space.occupants.append(person[0])
+                   person[0].accomodated = living_space.room_name
+                   person[0].allocation = office.room_name
                    return ("Successfull %s has been allocated an office and a living space."% person[0].first_name)
                 elif accomodation == "N":
                     office.occupants.append(person[0])
+                    person[0].allocation = office.room_name
                     return ("Successfull %s has been allocated an office."% person[0].first_name)
                 else:
                     return "Invalid input, choice of accomodation should be Y or N"
@@ -90,18 +94,22 @@ class Amity(object):
              if person[0].person_title.upper() == "STAFF":
                  if accomodation == "Y":
                      office.occupants.append(person[0])
+                     person[0].allocation = office.room_name
                      return ("%s has been allocated an office only, staff can not get accomodation"% person[0].first_name)
                  elif accomodation == "N":
                       office.occupants.append(person[0])
+                      person[0].allocation = office.room_name
                       return ("Successfull %s has been allocated an office."% person[0].first_name)
                  else:
                      return "Invalid input, choice of accomodation should be Y or N"
              elif person[0].person_title.upper() == "FELLOW":
                  if accomodation == "Y":
                        office.occupants.append(person[0])
+                       person[0].allocation = office.room_name
                        return ("%s has been allocated an office only, there are no living spaces available"% person[0].first_name)
                  elif accomodation == "N":
                       office.occupants.append(person[0])
+                      person[0].allocation = office.room_name
                       return ("Successful.%s has been allocated an office."% person[0].first_name)
                  else:
                      return "Invalid input, choice of accomodation should be Y or N"
@@ -120,6 +128,7 @@ class Amity(object):
             elif person[0].person_title.upper() == "FELLOW":
                 if accomodation == "Y":
                     living_space.occupants.append(person[0])
+                    person[0].living_space = living_space.room_name
                     return ("Successful. %s has been allocated living space only. \nThere are no offices available"% person[0].first_name)
                 elif accomodation == "N":
                     return "Sorry. There are no offices available"
@@ -176,7 +185,6 @@ class Amity(object):
     def print_allocations(self, file_name=None):
         '''
         Prints all allocations.
-        Checks the file out put created by the all_allocations method
         '''
         for room in self.existing_rooms:
             print (room.room_name)
@@ -192,55 +200,47 @@ class Amity(object):
                 file.write('-------------------------------------------------'+ "\n")
                 names_of_people = [person.full_name for person in room.occupants]
                 file.write(",".join(names_of_people)+"\n")
-            file.close()     
+            file.close()
 
-    def all_unallocated(self, file_name):
-        '''Creates a file containing a list of people added to the system but are not
-           allocated to any rooms.'''
-        all_persons = [person.full_name for person in self.every_person]
-        persons_allocated = []
-        persons_not_allocated = []
-        for room in self.existing_rooms:
-            for person in room.occupants:
-                persons_allocated.append(person.full_name)
-        file = open(file_name, 'w')
-        for person in all_persons:
-            if person not in persons_allocated:
-                persons_not_allocated.append(person.full_name)
-                file.write(person.full_name + "\n")
-                file.write('-------------------------------------------------'+ "\n")
-                file.write(' '+ "\n")
-        file.close()           
 
-    def print_unallocated(self, file_name):
+    def print_unallocated(self, file_name=None):
         '''
         Prints all unallocated.
-        Checks the file out put created by the all_unallocated method
         '''
-        all_persons = [person.full_name for person in self.every_person]
-        persons_allocated = []
-        persons_not_allocated = []
-        for room in self.existing_rooms:
-            for person in room.occupants:
-                persons_allocated.append(person.full_name)
-        for person in all_persons:
-            if person not in persons_allocated:
-                persons_not_allocated.append(person.full_name)        
-
-        if len(all_persons) == 0:
-            return 'Sorry. No persons in the system'
-        elif len(persons_not_allocated) == 0:
-            return 'Everyone has been allocated a room'
-        else:
-            file_type = file_name.split(".")
-            if len(file_type) == 2:
-                if file_type[1] == 'txt':
-                    self.all_unallocated(file_name)
-                    return 'Unallocated printed to :'+file_name
-                else:
-                    return 'Failed. Wrong file type'
+        unallocated = []
+        for person in self.every_person:
+            if person.person_title.upper() == "FELLOW":
+                if person.allocation == None:
+                    a = [person.identifier, person.first_name]
+                    unallocated.append(a)
+                elif person.accomodated == None:
+                    a = [person.identifier, person.first_name]
+                    unallocated.append(a) 
             else:
-                return 'Failed. Wrong file type'
+                if person.person_title.upper() == "STAFF":
+                    if person.allocation == None:
+                        a = [person.identifier, person.first_name]
+                        unallocated.append(a)
+        print (unallocated)
+        return "Successfully"
+
+    # def load_people(self, file_name):
+    #     try:
+    #         file_object = open(file_name, 'r')
+    #     except:
+    #         return 'Wrong file'
+    #     else:
+    #         for line in file_object:
+    #             objct = line.split()
+    #             if len(objct) == 4:
+    #                 self.add_person(object[0], object[1], object[2], object[3])
+    #             elif len(object) == 3:
+    #                 self.add_person(object[0], object[1], object[2], 'N')
+    #             else:
+    #                 return 'Wrong file'
+    #         return 'People loaded succesfully'
+
+        pass    
 
     def print_room(self, name):
         '''
@@ -255,49 +255,95 @@ class Amity(object):
         else:
             return "Invalid room name. Room does not exist."
 
-    def load_people(self, text_input):
-        '''
-        Adds people to the system from a text file.
-        '''
-        # try:
-        #     myfile = open(text_input, "r")
-        # except:
-        #     return "Error. Wrong file"
-        # else:
-        #     for line in myfile:
-        #         objct = line.split()
-        #         if len(objct) == 4:
-        #             self.add_person(objct[0], objct[1], objct[2], objct[3])
-        #         elif len(objct) == 3:
-        #             self.add_person(objct[0], objct[1], objct[2], "N")
-    def engine_create():
-        ENGINE = create_engine('sqlite:///amity.db')
-        BASE.metadata.create_all(ENGINE)
 
-    def save_state(self):
-        engine_create()
-        Session = sessionmaker()
-        engine = create_engine('sqlite:///amity.db')
-        Session.configure(bind=engine)
+    def save_state(self, file_name=None):
+        
+        if file_name is None: 
+            engine = create_engine('sqlite:///amity.db')
+        else:
+            engine = create_engine('sqlite:///' + file_name + '.db')
+        Base.metadata.bind = engine
+        Base.metadata.create_all(engine)    
+        Session = sessionmaker(bind=engine)
         session = Session()
         for room in self.existing_rooms:
             room_type = room.room_type
             room_name = room.room_name
             max_capacity = room.max_capacity
-            occcupants = ".".join(room.occupants)
+            str_occupants = [person.full_name for person in room.occupants]
+            occupants_names = ".".join(str_occupants)
 
+            room_details = Rooms(room_name, room_type, max_capacity, occupants_names)
+            session.add(room_details)
         for person in self.every_person:
-            id = person.identifier
-            full_name = person.full_name
-            person_title = person.person_title    
+            if person.person_title.upper() == "FELLOW":
+                id = person.identifier
+                full_name = person.full_name
+                person_title = person.person_title
+                allocation = person.allocation
+                accomodated = person.accomodated
+                person_details = Persons(id, full_name, person_title, accomodated, allocation)
+                session.add(person_details)
+            else:
+                id = person.identifier
+                full_name = person.full_name
+                person_title = person.person_title
+                allocation = person.allocation
+                accomodated = None
+                person_details = Persons(id, full_name, person_title, accomodated, allocation)
+                session.add(person_details)
 
-        return "Data saved to amity.db."
+        session.commit()        
+        return "Data saved."
 
-    def load_state(self):
-        pass
+    def load_state(self, file_name=None):
+        if file_name is None: 
+            engine = create_engine('sqlite:///amity.db')
+        else:
+            engine = create_engine('sqlite:///' + file_name + '.db')
+        Base.metadata.bind = engine
+        Base.metadata.create_all(engine)    
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        try:
+            rooms = session.query(Rooms).all()
+            persons = session.query(Persons).all()
+        except:
+            return ("Wrong file")
 
-    def edit(self):
-        pass                         
-           
+        for person in persons:
+            if person.person_title == "FELLOW":
+                person.full_name = person.full_name.split()
+                fellow = Fellow(person.full_name[0], person.full_name[1])
+                fellow.accomodated = person.accomodated
+                fellow.allocation = person.allocation
+                self.every_person.append(fellow) 
+            else:
+                person.full_name = person.full_name.split()
+                staff = Staff(person.full_name[0], person.full_name[1])
+                staff.allocation = person.allocation
+                self.every_person.append(staff)     
+        for room in rooms:
+            if room.room_type == "OFFICE":
+                office = Office(room.room_name)
+                if len(room.occupants) != 0:
+                    occupant_names = room.occupants.split(".")
+                    for name in occupant_names:
+                        the_person = [person for person in self.every_person if person.full_name == name]
+                        if len(the_person) != 0:
+                            office.occupants.append(the_person[0])
+
+                self.existing_rooms.append(office)
+            else:
+                living_space = LivingSpace(room.room_name)
+                if len(room.occupants) == 0:
+                    occupant_names = room.occupants.split(".")
+                    for name in occupant_names:
+                        the_person = [person for person in self.every_person if person.full_name == name]
+                        if len(the_person) != 0:
+                            living_space.occupants.append(the_person[0])
+
+                self.existing_rooms.append(living_space)
+
 
              
