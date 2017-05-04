@@ -1,15 +1,18 @@
 """
 AMITY.
 Usage:
-    amity create_room <room_type> <room_name>...
-    amity add_person <first_name> <second_name> <FELLOW|STAFF> [wants_accommodation]
-    amity reallocate_person <person_identifier> <new_room_name>
-    amity load_people [-o]
-    amity print_allocations [-o]
-    amity print_unallocated [-o]
-    amity print_room <room_name>
-    amity save_state [--db]
-    amity load_state <sqlite_database>
+    amity create_room <room_type> <room_names>...
+    amity add_person <first_name> <last_name> <person_title> ( FELLOW | STAFF ) [<accomodation>]
+    amity allocate_room <id_no> <accomodation>
+    amity fetch_person <id_no>
+    amity fetch_room <name>
+    amity reallocate_room <id_no> <r_name>
+    amity print_allocations [<file_name.txt>]
+    amity load_people [<file_name.txt>]
+    amity print_unallocated [<file_name.txt>]
+    amity print_room <name>
+    amity save_state [<file_name.db>]
+    amity load_state [<file_name.db>]
     amity (-i | --interactive)
     amity (-h | --help | --version)
 Options:
@@ -19,169 +22,145 @@ Options:
 
 import sys
 import cmd
+import re
+from termcolor import cprint, colored
+from pyfiglet import Figlet, figlet_format
 from docopt import docopt, DocoptExit
 from amity.amity_model import Amity
 
 
-
 def docopt_cmd(func):
-    """
-    This decorator is used to simplify the try/except block and pass the result
-    of the docopt parsing to the called action.
-    """
+    
+
     def fn(self, arg):
         try:
             opt = docopt(fn.__doc__, arg)
-
         except DocoptExit as e:
             # The DocoptExit is thrown when the args do not match.
             # We print a message to the user and the usage block.
-
             print('Invalid Command!')
             print(e)
             return
-
         except SystemExit:
             # The SystemExit exception prints the usage for --help
             # We do not need to do the print here.
-
             return
-
         return func(self, opt)
-
     fn.__name__ = func.__name__
     fn.__doc__ = func.__doc__
     fn.__dict__.update(func.__dict__)
     return fn
 
 
-class MyInteractive (cmd.Cmd):
-
-    # launch()
-    print (__doc__)
-
-    prompt = ('(Amity)')
-    
-    file = None
+class MyInteractive(cmd.Cmd):
 
     amity = Amity()
+    cprint(figlet_format("AMITY", font="rev"), "magenta", attrs=['bold'])
+    #prompt = '(amity)'
+    file = None
+    print(__doc__)
+
 
     @docopt_cmd
     def do_create_room(self, arg):
-        '''Instantiates a living space or office based on prefix
-            Usage: create_room <room_type> <room_name>...'''
-
-        name = arg['<room_name>']
+        """Usage: create_room <room_type> <room_names>..."""
         room_type = arg['<room_type>']
-
-        # for room in name:
-        #     try:
-        #         print(self.amity.create_room(room_type, room))
-        #     except:
-        #         print("Something went wrong.")
-
+        room_names = arg['<room_names>']
+        for room_name in room_names:
+            self.amity.create_room(room_name, room_type)
 
     @docopt_cmd
     def do_add_person(self, arg):
         """Usage: add_person <first_name> <last_name> <person_title> [<accomodation>]"""
 
-        fname = arg["<first_name>"]
-        lname = arg["<last_name>"]
-        role = arg["<person_title>"]
-        wants_accommodation = arg["<accomodation>"]
-
-        print(self.amity.add_person(fname, lname, role, wants_accommodation))
-
+        fname = arg["<first_name>"].upper()
+        lname = arg["<last_name>"].upper()
+        role = arg["<person_title>"].upper()
+        wants_accommodation = arg["<accomodation>"].upper()
+        if re.match("^[a-zA-Z]*$", fname) or re.match("^[a-zA-Z]*$", lname):
+            self.amity.add_person(fname, lname, role, wants_accommodation)
+        else:        
+            cprint("Error. Make sure you only have letters in First name and last name", "red") 
 
     @docopt_cmd
     def do_allocate_room(self, arg):
-	    """Usage: allocate_room <id_no> <accomodation>"""
+        """Usage: allocate_room <id_no> [<accomodation>]"""
 
-		identifier = arg["<id_no>"]
-		new_room = arg["<accomodation>"]
-		
-		print(self.amity.allocate_room(int(identifier), new_room))
+        person_id = arg["<id_no>"]
+        room = arg["<accomodation>"]
+        self.amity.allocate_room(int(person_id), room)
 
     @docopt_cmd
     def do_reallocate_room(self, arg):
         """ Usage: reallocate_room <id_no> <r_name>"""
-        
         identifier = arg["<id_no>"]
         new_room = arg["<r_name>"]
+        self.amity.reallocate_room(int(identifier), new_room)
 
-        print(self.amity.reallocate_room(int(identifier), new_room))
 
+    @docopt_cmd
+    def do_load_people(self, arg):
+        """ Usage: load_people [<file_name.txt>]"""
 
-    # @docopt_cmd
-    # def do_load_people(self, arg):
-    #     """ Usage: load_people [<--o>]"""
+        file_name = arg['<file_name.txt>']
+        self.amity.load_people(file_name)
 
-    #     if arg['<--o>']:
-    #         filename = arg['<--o>']
-    #     else:
-    #         filename = None
-
-    #     print(self.amity.load_people(filename))
 
     @docopt_cmd
     def do_print_allocations(self, arg):
-        """ Usage: print_allocations [<--o>] """
+        """ Usage: print_allocations [<file_name.txt>] """
 
-        if arg['<--o>']:
-            filename = arg['<--o>']
+        if arg['<file_name.txt>']:
+            filename = arg['<file_name.txt>']
         else:
             filename = None
-
-
-        print(self.amity.print_allocations(filename))
-
+            self.amity.print_allocations(filename)
 
     @docopt_cmd
     def do_print_unallocated(self, arg):
-        """ Usage: print_unallocated [<--o>] """
+        """ Usage: print_unallocated [<file_name.txt>] """
 
-        if arg['<--o>']:
-            filename = arg['<--o>']
+        if arg['<file_name.txt>']:
+            filename = arg['<file_name.txt>']
         else:
             filename = None
-
-
-        print(self.amity.print_unallocated(filename))
+            self.amity.print_unallocated(filename)
 
     @docopt_cmd
     def do_print_room(self, arg):
         """ Usage: print_room <name> """
 
         room_name = arg['<name>']
-
-        print(self.amity.print_room(room_name))
+        self.amity.print_room(room_name)
 
     @docopt_cmd
     def do_save_state(self, arg):
-        """ Usage: save_state [<--db>] """
+        """ Usage: save_state [<file_name.db>] """
 
-        if arg['<--db>']:
-            dbname = arg['<--db>']
+        if not arg['<file_name.db>']:
+            dbname = arg['<amity.db>']
         else:
-            dbname = None
-
-        print(self.amity.save_state(dbname))
+            dbname = arg['<file_name.db>']
+            self.amity.save_state(dbname)
 
     @docopt_cmd
     def do_load_state(self, arg):
-        """ Usage: load_state <sqlite_database> """
+        """ Usage: load_state <file_name.db> """
 
-        dbname = arg['<sqlite_database>']
+        dbname = arg['<file_name.db>']
 
-        print(self.amity.load_state(dbname))
+        self.amity.load_state(dbname)
 
     def do_quit(self, arg):
         """Quits out of Interactive Mode."""
 
-        print('Good Bye!')
+        cprint('Good Bye!', "green")
         exit()
+
 
 opt = docopt(__doc__, sys.argv[1:])
 
+
 if opt['--interactive']:
     MyInteractive().cmdloop()
+    print (opt)
