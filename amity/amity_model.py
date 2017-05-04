@@ -294,6 +294,7 @@ class Amity(object):
             occupants_available = [person for person in specific_room[0].occupants]
             cprint(specific_room[0].room_name, "magenta") 
             cprint([person.first_name for person in occupants_available], "magenta")
+            return "Successfull"
         else:
             return cprint("Invalid room name. Room does not exist.", "red")
 

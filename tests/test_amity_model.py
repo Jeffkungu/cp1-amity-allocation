@@ -108,7 +108,19 @@ class TestAmityModule(unittest.TestCase):
         persons = ["OLUWAFEMI, " "SULE, " "FELLOW, " "Y"]
         file.writelines(persons)
         file.close()
-        self.assertEqual(self.amity.load_people("people.txt"), "Successfull")    
+        self.assertEqual(self.amity.load_people("people.txt"), "Successfull")
+
+    def test_print_unallocated(self):
+        self.amity.add_person('Teddy', "Kungu", "FELLOW", "Y")
+        self.assertEqual(self.amity.print_unallocated(), "Successfull")
+
+    def test_print_room(self):
+        self.amity.create_room("PHP", "OFFICE")
+        self.amity.create_room("Valhalla", "LIVINGSPACE")
+        self.amity.add_person('Teddy', "Kungu", "FELLOW", "Y")
+        person_object = self.amity.every_person[0]
+        self.amity.allocate_room(person_object.identifier,'Y')
+        self.assertEqual(self.amity.print_room("PHP"), "Successfull")  
             
 
 if __name__ == '__main__':
