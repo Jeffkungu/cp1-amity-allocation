@@ -35,19 +35,3 @@ class Rooms(Base):
     room_type = Column(String(500), nullable=False)
     max_capacity = Column(Integer, nullable=False)
     occupants = Column(String, nullable=True)
-
-
-class Allocations(Base):
-    def __init__(self, full_name, office_name, livingsp_name):
-        self.full_name = full_name
-        self.office_name = office_name
-        self.livingsp_name = livingsp_name
-
-    __tablename__ = 'Allocations'
-
-    id = Column(Integer, primary_key=True)
-    full_name = Column(String(500), nullable=False)
-    office_name = Column(String(500), nullable=True)
-    livingsp_name = Column(String(500), nullable=True)
-
-
