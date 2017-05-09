@@ -12,6 +12,7 @@ class Amity(object):
     def __init__(self):
         self.existing_rooms = []
         self.every_person = []
+        self.unallocated = []
 
     def create_room(self, room_name, room_type):
         '''
@@ -33,13 +34,14 @@ class Amity(object):
             cprint("Office successfully created", "green")
             return "Office successfully created"
         if room_type.upper() not in ['OFFICE', 'LIVINGSPACE']:
-            cprint("Invalid room type, should be LIVING SPACE or OFFICE", "red")
-            return "Invalid room type, should be LIVING SPACE or OFFICE"
+            cprint("Invalid room type, should be LIVINGSPACE or OFFICE", "red")
+            return "Invalid room type, should be LIVINGSPACE or OFFICE"
 
     def add_person(self, first_name, last_name, person_title, accomodation):
         '''
         Adds person either Staff or Fellow.
         Assigns an id to each person added. You can add more than one person with similar names.
+        Automatically assigns person a room, if no room present person is added to the unallocated list.
         '''
         person_title = person_title.upper()
         full_name = first_name + " " + last_name
@@ -49,153 +51,249 @@ class Amity(object):
         if person_title.upper() not in ["STAFF", "FELLOW"]:
             cprint("Invalid role, should be STAFF or FELLOW", "red")
             return "Invalid role, should be STAFF or FELLOW"
-        elif accomodation == "N" and person_title == "FELLOW":
-            fellow = Fellow(first_name, last_name)
-            self.every_person.append(fellow)
-            cprint("%s successfully added"% full_name, "green")
-            cprint(fellow.identifier, "blue")
-            return "Person successfully added"
-        elif accomodation == "N" and person_title == "STAFF":
-            staff = Staff(first_name, last_name)
-            self.every_person.append(staff)
-            cprint("%s successfully added"% full_name, "green")
-            cprint(staff.identifier, "blue")
+        livingsp_available = [livingsp for livingsp in self.existing_rooms if livingsp.room_type == "LIVINGSPACE"
+                               and livingsp.is_vacant()]
+        offices_available = [ofice for ofice in self.existing_rooms if ofice.room_type == "OFFICE"
+                             and ofice.is_vacant()]   
+        fellow = Fellow(first_name, last_name) 
+        staff = Staff(first_name, last_name)                                    
+        if accomodation == "N" and person_title == "STAFF":
+            if not offices_available:
+                self.every_person.append(staff)
+                self.unallocated.append(staff)
+                return cprint("No room available. Person has been added to the unallocated list.", "yellow")
+            else:
+                 office = random.choice(offices_available)
+                 self.every_person.append(staff)
+                 office.occupants.append(fellow)
+                 staff.allocation = office.room_name
+                 return cprint("Person has been allocated an office", "green")
+        elif accomodation == "Y" and person_title == "STAFF":
+            return cprint("Sorry, Staff cant get accomodation.", "red")
         elif accomodation == "Y" and person_title == "FELLOW":
-                fellow = Fellow(first_name, last_name)
+            if offices_available and livingsp_available:
+                office = random.choice(offices_available)
+                living_space = random.choice(livingsp_available)
                 self.every_person.append(fellow)
-                cprint("%s successfully added"% full_name, "green")
-                cprint(fellow.identifier, "blue")
+                office.occupants.append(fellow)
+                living_space.occupants.append(fellow)
+                fellow.allocation = office.room_name
+                fellow.accomodated = living_space.room_name
+                return cprint("Succesfull. Person has been allocated to a living space and office", "green")
+            if offices_available and not livingsp_available:
+                office = random.choice(offices_available)
+                office.occupants.append(fellow)
+                fellow.allocation = office.room_name
+                self.every_person.append(fellow)
+                return cprint("Person has been allocated an office only. There are no living sopaces available.", "yellow")
+            if livingsp_available and not offices_available:
+                living_space = random.choice(livingsp_available)
+                living_space.occupants.append(fellow)
+                fellow.accomodated = living_space.room_name
+                self.every_person.append(fellow)
+                return cprint("Person has been allocated a living space only. There are no offices available.", "yellow")
+            if not livingsp_available or offices_available:
+                self.every_person.append(fellow)
+                self.unallocated.append(fellow)
+                return cprint("No room available. Person has been added to the unallocated list.", "yellow")
         else:
-            if accomodation == "Y" and person_title == "STAFF":
-                cprint("Error", "red")
-                return "Invalid input, staff can not get accomodation"
+            if accomodation == "N" and person_title == "FELLOW":
+                if not offices_available:
+                    self.every_person.append(fellow)
+                    self.unallocated.append(fellow)
+                    return cprint("No offices available. Person has been added to the unallocated list.", "yellow")
+                else:
+                    office = random.choice(offices_available)
+                    office.occupants.append(fellow)
+                    fellow.allocation = office.room_name
+                    self.every_person.append(fellow)
+                    return cprint("Person has been allocated an office only.", "green")  
 
+    def get_person(self, id_no):
+        '''
+        Gets person who have not been allocated to a room.
+        '''
+        person = [person for person in self.every_person if person.identifier == id_no]
+        if not person:
+            return cprint("Person id does not exist", "red")
+        return person[0]
+                
     def allocate_room(self, id_no, accomodation):
         '''
         Allocates room randomly using the id assigned to each person added to the system.
         Checks if there are rooms with available spaces before allocating rooms.
+        Removes person from the unallocated list.
         '''
-        livingsp_available = [l for l in self.existing_rooms if l.room_type == "LIVING SPACE"
-                               and l.max_capacity > len(l.occupants)]
-        offices_available = [o for o in self.existing_rooms if o.room_type == "OFFICE"
-                             and o.max_capacity > len(o.occupants)]
-        person = [person for person in self.every_person if person.identifier == id_no]
+        livingsp_available = [livingsp for livingsp in self.existing_rooms if livingsp.room_type == "LIVINGSPACE"
+                               and livingsp.is_vacant()]
+        offices_available = [ofice for ofice in self.existing_rooms if ofice.room_type == "OFFICE"
+                             and ofice.is_vacant()]  
+        # person = [person for person in self.every_person if person.identifier == id_no]
+        person = self.get_person(id_no)
+        title = person.person_title
+        fellow = Fellow(first_name, last_name)
 
         if len(livingsp_available) > 0 and len(offices_available) > 0:
-            living_space = random.choice(list(livingsp_available))
-            office = random.choice(list(offices_available))
-            if person[0].person_title.upper() == "STAFF":
-                if accomodation == "Y":
-                    office.occupants.append(person[0])
-                    person[0].allocation = office.room_name
-                    cprint("%s has been allocated an office only"% person[0].first_name, "green")
-                    return "Staff can not get accomodation"
-                elif accomodation == "N":
-                    office.occupants.append(person[0])
-                    person[0].allocation = office.room_name
-                    cprint("%s has been allocated an office."% person[0].first_name, "green")
-                    return "Successfull person has been allocated an office."
+            living_space = random.choice(livingsp_available)
+            office = random.choice(offices_available)
+            if person == "Person id does not exist":
+                return cprint("Person id does not exist", "red")
+            elif title.upper() == "FELLOW" and person.accomodation == "Y":
+                if fellow.accomodated == None and fellow.allocated == None:
+                    office.occupants.append(person)
+                    living_space.occupants.append(person)
+                    self.unallocated.remove(person)
+                    return cprint("Person has been allocated office and living space", "green")
+                elif fellow.accomodated == None and fellow.allocated != None:
+                    living_space.occupants.append(person)
+                    self.unallocated.remove(person)
+                    return cprint("Person has been allocated a living space", "green")
                 else:
-                    cprint("Error", "red")
-                    return "Invalid input, choice of accomodation should be Y or N"
-            elif person[0].person_title.upper() == "FELLOW":
-                if accomodation == "Y":
-                   office.occupants.append(person[0])
-                   living_space.occupants.append(person[0])
-                   person[0].accomodated = living_space.room_name
-                   person[0].allocation = office.room_name
-                   cprint("%s has been allocated an office and a living space."% person[0].first_name, "green")
-                   return "Successfull person has been allocated office and living space"
-                elif accomodation == "N":
-                    office.occupants.append(person[0])
-                    person[0].allocation = office.room_name
-                    cprint("%s has been allocated an office."% person[0].first_name, "green")
-                    return "Successfull person has been allocated an office only."
-                else:
-                    cprint("Error", "red")
-                    return "Invalid input, choice of accomodation should be Y or N"
+                     if fellow.accomodated != None and fellow.allocated == None:
+                         office.occupants.append(person)
+                         self.unallocated.remove(person)
+                         return cprint("Person has been allocated an office.", "green")
+            elif title.upper() == "FELLOW" and person.accomodation == "N":
+                office.occupants.append(person)
+                self.unallocated.remove(person)
+                return cprint("Person has been allocated an office.", "green")
             else:
-                return cprint("Invalid input, person title should be FELLOW or STAFF", "red")
-
-        elif len(livingsp_available) == 0 and len(offices_available) > 0:
-             office = random.choice(list(offices_available))
-             if person[0].person_title.upper() == "STAFF":
-                 if accomodation == "Y":
-                     office.occupants.append(person[0])
-                     person[0].allocation = office.room_name
-                     cprint("%s has been allocated an office only"% person[0].first_name, "green")
-                     return "Staff can not get accomodation"
-                 elif accomodation == "N":
-                      office.occupants.append(person[0])
-                      person[0].allocation = office.room_name
-                      cprint("%s has been allocated an office."% person[0].first_name, "green")
-                      return "Successfull person has been allocated an office."
-                 else:
-                     cprint("Error", "red")
-                     return "Invalid input, choice of accomodation should be Y or N"
-             elif person[0].person_title.upper() == "FELLOW":
-                 if accomodation == "Y":
-                       office.occupants.append(person[0])
-                       person[0].allocation = office.room_name
-                       return cprint("%s has been allocated an office only, there are no living spaces available"% person[0].first_name, "green")
-                 elif accomodation == "N":
-                      office.occupants.append(person[0])
-                      person[0].allocation = office.room_name
-                      cprint("%s has been allocated an office."% person[0].first_name, "green")
-                      return "Successfull person has been allocated an office only."
-                 else:
-                     cprint("Error", "red")
-                     return "Invalid input, choice of accomodation should be Y or N"
-             else:
-                 cprint("Error", "red")
-                 return "Invalid input, person title should be FELLOW or STAFF"
+                if title.upper() == "STAFF" and person.accomodation == "N":
+                    office.occupants.append(person)
+                    self.unallocated.remove(person)
+                    return cprint("Person has been allocated an office.", "green")
 
         elif len(livingsp_available) > 0 and len(offices_available) == 0:
-            living_space.occupants.append(person[0])
-            if person[0].person_title.upper() == "STAFF":
-                 if accomodation == "Y":
-                     cprint("Failed.", "red")
-                     return "Staff can not get accomodation"
-                 elif accomodation == "N":
-                     return cprint("Sorry. There are no offices available", "red")
-                 else:
-                     cprint("Error", "red")
-                     return "Invalid input, choice of accomodation should be Y or N"
-            elif person[0].person_title.upper() == "FELLOW":
-                if accomodation == "Y":
-                    living_space.occupants.append(person[0])
-                    person[0].living_space = living_space.room_name
-                    return cprint("Successful. %s has been allocated living space only. \nThere are no offices available"% person[0].first_name, "green")
-                elif accomodation == "N":
-                    return cprint("Sorry. There are no offices available", "red")
-                else:
-                    return cprint("Invalid input. Choice of accomodation should be Y or N", "red")
+            living_space = random.choice(livingsp_available)
+            if title.upper() == "STAFF" and person.accomodation == "N":
+                cprint("Sorry, there are no offices available.", "yellow")
+                cprint("Creqate office room before allocating Staff.", "yellow")
+            elif title.upper() == "STAFF" and person.accomodation == "Y":
+                cprint("Sorry, staff can not get accomodation.", "yellow")
+            elif title.upper() == "FELLOW" and person.accomodation == "N":
+                cprint ("Sorry, there are no offices available.", "yellow")
             else:
-                return cprint("Invalid input, person title should be FELLOW or STAFF", "red")
+                if title.upper() == "FELLOW" and person.accomodation == "Y":
+                    if fellow.accomodated == None and fellow.allocated == None:
+                        living_space.occupants.append(person)
+                        
+                         
+                    
+            
 
-        else:
-            if len(livingsp_available) == 0 and len(offices_available) == 0:
-                return cprint("Sorry. There are no living space or offices available", "red")
+                  
+                #elif title.upper() == "FELLOW" and person.accomodation == "Y":   
+
+            
+
+        #     if person[0].person_title.upper() == "STAFF":
+        #         if accomodation == "Y":
+        #             office.occupants.append(person[0])
+        #             person[0].allocation = office.room_name
+        #             cprint("%s has been allocated an office only"% person[0].first_name, "green")
+        #             return "Staff can not get accomodation"
+        #         elif accomodation == "N":
+        #             office.occupants.append(person[0])
+        #             person[0].allocation = office.room_name
+        #             cprint("%s has been allocated an office."% person[0].first_name, "green")
+        #             return "Successfull person has been allocated an office."
+        #         else:
+        #             cprint("Error", "red")
+        #             return "Invalid input, choice of accomodation should be Y or N"
+        #     elif person[0].person_title.upper() == "FELLOW":
+        #         if accomodation == "Y":
+        #            office.occupants.append(person[0])
+        #            living_space.occupants.append(person[0])
+        #            person[0].accomodated = living_space.room_name
+        #            person[0].allocation = office.room_name
+        #            cprint("%s has been allocated an office and a living space."% person[0].first_name, "green")
+        #            return "Successfull person has been allocated office and living space"
+        #         elif accomodation == "N":
+        #             office.occupants.append(person[0])
+        #             person[0].allocation = office.room_name
+        #             cprint("%s has been allocated an office."% person[0].first_name, "green")
+        #             return "Successfull person has been allocated an office only."
+        #         else:
+        #             cprint("Error", "red")
+        #             return "Invalid input, choice of accomodation should be Y or N"
+        #     else:
+        #         return cprint("Invalid input, person title should be FELLOW or STAFF", "red")
+
+        # elif len(livingsp_available) == 0 and len(offices_available) > 0:
+        #      office = random.choice(list(offices_available))
+        #      if person[0].person_title.upper() == "STAFF":
+        #          if accomodation == "Y":
+        #              office.occupants.append(person[0])
+        #              person[0].allocation = office.room_name
+        #              cprint("%s has been allocated an office only"% person[0].first_name, "green")
+        #              return "Staff can not get accomodation"
+        #          elif accomodation == "N":
+        #               office.occupants.append(person[0])
+        #               person[0].allocation = office.room_name
+        #               cprint("%s has been allocated an office."% person[0].first_name, "green")
+        #               return "Successfull person has been allocated an office."
+        #          else:
+        #              cprint("Error", "red")
+        #              return "Invalid input, choice of accomodation should be Y or N"
+        #      elif person[0].person_title.upper() == "FELLOW":
+        #          if accomodation == "Y":
+        #                office.occupants.append(person[0])
+        #                person[0].allocation = office.room_name
+        #                return cprint("%s has been allocated an office only, there are no living spaces available"% person[0].first_name, "green")
+        #          elif accomodation == "N":
+        #               office.occupants.append(person[0])
+        #               person[0].allocation = office.room_name
+        #               cprint("%s has been allocated an office."% person[0].first_name, "green")
+        #               return "Successfull person has been allocated an office only."
+        #          else:
+        #              cprint("Error", "red")
+        #              return "Invalid input, choice of accomodation should be Y or N"
+        #      else:
+        #          cprint("Error", "red")
+        #          return "Invalid input, person title should be FELLOW or STAFF"
+
+        # elif len(livingsp_available) > 0 and len(offices_available) == 0:
+        #     living_space.occupants.append(person[0])
+        #     if person[0].person_title.upper() == "STAFF":
+        #          if accomodation == "Y":
+        #              cprint("Failed.", "red")
+        #              return "Staff can not get accomodation"
+        #          elif accomodation == "N":
+        #              return cprint("Sorry. There are no offices available", "red")
+        #          else:
+        #              cprint("Error", "red")
+        #              return "Invalid input, choice of accomodation should be Y or N"
+        #     elif person[0].person_title.upper() == "FELLOW":
+        #         if accomodation == "Y":
+        #             living_space.occupants.append(person[0])
+        #             person[0].living_space = living_space.room_name
+        #             return cprint("Successful. %s has been allocated living space only. \nThere are no offices available"% person[0].first_name, "green")
+        #         elif accomodation == "N":
+        #             return cprint("Sorry. There are no offices available", "red")
+        #         else:
+        #             return cprint("Invalid input. Choice of accomodation should be Y or N", "red")
+        #     else:
+        #         return cprint("Invalid input, person title should be FELLOW or STAFF", "red")
+
+        # else:
+        #     if len(livingsp_available) == 0 and len(offices_available) == 0:
+        #         return cprint("Sorry. There are no living space or offices available", "red")
 
     def fetch_person(self, id_no):
         '''Gets you the person with all attributes attached to the person object.
            Gets the person using the Id assigned to the person'''
 
-        identifiers = [person.identifier for person in self.every_person]
-        if id_no in identifiers:
-            person = [person for person in self.every_person if person.identifier == id_no]
-            return person[0]
-        else:
+        person = [person for person in self.every_person if person.identifier == id_no]
+        if not person:
             return "Sorry, person does not exist"
+        return person[0]
 
     def fetch_room(self, name):
         '''Gets you the room with all the occupants present '''
-        rooms = [room.room_name for room in self.existing_rooms]
-        if name.upper() in rooms:
-            fetched_room = [room for room in self.existing_rooms if room.room_name == name.upper()]
-            return fetched_room[0]
-        else:
+        room = [room for room in self.existing_rooms if room.room_name == name]
+        if not room:
             return "Sorry, room does not exist"
+        return  room[0]
 
     def reallocate_room(self, id_no, r_name):
         '''
@@ -211,13 +309,25 @@ class Amity(object):
         if person == "Sorry, person does not exist":
             print ("Sorry, person does not exist")
             return cprint("Sorry, person does not exist", "red")
-        elif room == "Sorry, room does not exist":
+        if room == "Sorry, room does not exist":
             print ("Sorry, room does not exist")
             return cprint("Sorry, room does not exist", "red")
         else:
-            room.occupants.append(person)
+            if title.upper() == "STAFF" and r_type.upper() == "LIVINGSPACE":
+                cprint ("Sorry staff can not be reallocated to living space", "red")
+                return "Sorry staff can not be reallocated to living space"
+            elif  title.upper() == "STAFF" and r_type.upper() == "OFFICE":
+                room.occupants.append(person)
+                return cprint("{} has been successfully reallocated to {} ".format(person.first_name, room.room_name), "green")
+            elif  title.upper() == "FELLOW" and r_type.upper() == "OFFICE":
+                room.occupants.append(person)
+                return cprint("{} has been successfully reallocated to {} ".format(person.first_name, room.room_name), "green")
+            else:
+                if title.upper() == "FELLOW" and r_type.upper() == "LIVINGSPACE":
+                    room.occupants.append(person)
+                    return cprint("{} has been successfully reallocated to {} ".format(person.first_name, room.room_name), "green")
             for room in self.existing_rooms:
-                occupant_found = [ p for p in room.occupants if p.identifier == id_no]
+                occupant_found = [ person for person in room.occupants if person.identifier == id_no]
                 if len(occupant_found)>0:
                     room.occupants.remove(person)
             cprint("{} has been successfully reallocated to {} ".format(person.first_name, room.room_name), "green")
@@ -265,22 +375,15 @@ class Amity(object):
         '''
         Prints all unallocated.
         '''
-        unallocated = []
-        for person in self.every_person:
-            if person.person_title.upper() == "FELLOW":
-                if person.allocation == None:
-                    a = [person.identifier, person.first_name]
-                    unallocated.append(a)
-                elif person.accomodated == None:
-                    a = [person.identifier, person.first_name]
-                    unallocated.append(a)
-            else:
-                if person.person_title.upper() == "STAFF":
-                    if person.allocation == None:
-                        a = [person.identifier, person.first_name]
-                        unallocated.append(a)
-        cprint(unallocated, "cyan")
-        return "Successfull"
+        output = ''
+        output += 'Identifier  ' + '\t' + 'First Name  ' + '\t' + 'Last Name  ' + '\t' + 'Type' + '\n'
+        for person in self.unallocated:
+            output += str(person.identifier) + '\t' + person.first_name  + '\t\t' + person.last_name + '\t\t' + person.person_title + '\n'
+
+        cprint(output, "cyan")
+        if len(self.unallocated) == 0:
+            return cprint("The unallocated list is empty", "yellow")
+        return cprint("Successfull", "green")    
 
     def load_people(self, file_name):
         try:
