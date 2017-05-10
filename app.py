@@ -11,6 +11,9 @@ Usage:
     amity load_people [<file_name.txt>]
     amity print_unallocated [<file_name.txt>]
     amity print_room <name>
+    amity print_persons [<file_name.txt>]
+    amity delete_person <id_no>
+    amity delete_room <room_names>...
     amity save_state [<file_name.db>]
     amity load_state [<file_name.db>]
     amity (-i | --interactive)
@@ -26,7 +29,7 @@ import re
 from termcolor import cprint, colored
 from pyfiglet import Figlet, figlet_format
 from docopt import docopt, DocoptExit
-from amity.amity_model import Amity
+from app.amity_model import Amity
 
 
 def docopt_cmd(func):
@@ -132,6 +135,31 @@ class MyInteractive(cmd.Cmd):
 
         room_name = arg['<name>']
         self.amity.print_room(room_name)
+
+    @docopt_cmd
+    def do_print_persons(self, arg):
+        """ Usage: print_persons [<file_name.txt>] """
+
+        if arg['<file_name.txt>']:
+            filename = arg['<file_name.txt>']
+        else:
+            filename = None
+            self.amity.print_persons(filename)
+
+    @docopt_cmd
+    def do_delete_person(self, arg):
+        """Usage: delete_person <id_no> """
+
+        person_id = arg["<id_no>"]
+        self.amity.delete_person(int(person_id))
+
+    @docopt_cmd
+    def do_delete_room(self, arg):
+        """Usage: delete_room <room_names>..."""
+
+        room_names = arg['<room_names>']
+        for room_name in room_names:
+            self.amity.delete_room(room_name)
 
     @docopt_cmd
     def do_save_state(self, arg):
