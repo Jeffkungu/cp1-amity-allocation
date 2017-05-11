@@ -1,0 +1,7 @@
+.cache
+.vscode
+__pycache__
+amity.db
+app.pyc
+.coverage
+*.pyc
